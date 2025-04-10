@@ -184,7 +184,11 @@ def show_results(phone):
     print(Fore.GREEN + f"   {wa_link}")
 
     # Truecaller-style lookup
-    lt, loc, car, ctry = get_truecaller_like_data(phone)
+    result = get_truecaller_like_data(phone)
+if result:
+    lt, loc, car, ctry = result
+else:
+    lt, loc, car, ctry = "N/A", "N/A", "N/A", "N/A"
     print("\n" + Fore.CYAN + "[+] Public Lookup:")
     if lt or loc or car:
         print(Fore.GREEN + f"   Line Type : {lt}")
