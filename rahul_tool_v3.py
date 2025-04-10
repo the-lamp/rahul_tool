@@ -184,22 +184,21 @@ def show_results(phone):
     print(Fore.GREEN + f"   {wa_link}")
 
     # Truecaller-style lookup
-result = get_truecaller_like_data(phone)
-if result and isinstance(result, tuple) and len(result) == 4:
-    lt, loc, car, ctry = result
-else:
-    lt, loc, car, ctry = "N/A", "N/A", "N/A", "N/A"
+    result = get_truecaller_like_data(phone)
+    if result and isinstance(result, tuple) and len(result) == 4:
+        lt, loc, car, ctry = result
+    else:
+        lt, loc, car, ctry = "N/A", "N/A", "N/A", "N/A"
 
-print("\n" + Fore.CYAN + "[+] Public Lookup:")
-if lt != "N/A" or loc != "N/A" or car != "N/A":
-    print(Fore.GREEN + f"   Line Type : {lt}")
-    print(Fore.GREEN + f"   Location  : {loc}")
-    print(Fore.GREEN + f"   Carrier   : {car}")
-    print(Fore.GREEN + f"   Country   : {ctry}")
-else:
-    print(Fore.RED + "   [!] Failed to fetch public name lookup.")
+    print("\n" + Fore.CYAN + "[+] Public Lookup:")
+    if lt != "N/A" or loc != "N/A" or car != "N/A":
+        print(Fore.GREEN + f"   Line Type : {lt}")
+        print(Fore.GREEN + f"   Location  : {loc}")
+        print(Fore.GREEN + f"   Carrier   : {car}")
+        print(Fore.GREEN + f"   Country   : {ctry}")
+    else:
+        print(Fore.RED + "   [!] Failed to fetch public name lookup.")
 
-    
     # IP Geolocation
     ip_info = get_ip_location()
     print("\n" + Fore.CYAN + "[+] Your IP Location:")
@@ -224,6 +223,12 @@ else:
 
 
 if __name__ == "__main__":
-    os.system('cls' if os.name == 'nt' else 'clear')
-    phone = input(Fore.YELLOW + "Enter phone number with country code (e.g. +919876543210): ")
-    show_results(phone)
+    try:
+        os.system('cls' if os.name == 'nt' else 'clear')
+        phone = input(Fore.YELLOW + "Enter phone number with country code (e.g. +919876543210): ").strip()
+        if phone and phone.startswith("+") and len(phone) > 8:
+            show_results(phone)
+        else:
+            print(Fore.RED + "[!] Invalid phone number format.")
+    except Exception as e:
+        print(Fore.RED + f"[!] Unexpected error occurred: {e}")
