@@ -1,26 +1,19 @@
 import phonenumbers
 from phonenumbers import geocoder, carrier, timezone
-from googlesearch import search
-import re
-import time
-import os
 import requests
-
-try:
-    from colorama import init, Fore, Style
-except ImportError:
-    os.system('pip install colorama')
-    from colorama import init, Fore, Style
+from googlesearch import search
+from bs4 import BeautifulSoup
+import re
+import os
+from colorama import init, Fore, Style
 
 init(autoreset=True)
 
-
 def print_heading():
     print(Fore.CYAN + "="*65)
-    print(Fore.GREEN + Style.BRIGHT + "         RAHUL BHAI KA LEVEL 3 CYBER TOOL")
-    print(Fore.YELLOW + "   Phone Number OSINT + Social + IP Tracer Tool")
+    print(Fore.GREEN + Style.BRIGHT + "         RAHUL BHAI KA LEVEL 3 CYBER TOOL - ADVANCED")
+    print(Fore.YELLOW + "   Phone Number OSINT + Social + IP Tracer (Free APIs Only)")
     print(Fore.CYAN + "="*65 + "\n")
-
 
 def get_basic_info(phone):
     try:
@@ -37,71 +30,53 @@ def get_basic_info(phone):
     except:
         return None
 
-
 def get_google_mentions(phone):
     try:
         print(Fore.MAGENTA + "   [+] Searching Google...")
         dork = f'"{phone}" OR intext:{phone} OR site:pastebin.com {phone}'
         results = list(search(dork, num_results=10))
         return results
-    except:
+    except Exception as e:
+        print(Fore.RED + f"   [!] Google search failed: {e}")
         return []
 
-
-def extract_names_and_locations(results):
+def extract_names_and_locations(links):
     names = set()
     locations = set()
-    pattern_name = re.compile(r'\b[A-Z][a-z]+\s[A-Z][a-z]+')
-    pattern_location = re.compile(r'in\s+[A-Z][a-z]+')
+    name_pattern = re.compile(r'\b[A-Z][a-z]+ [A-Z][a-z]+')
+    location_pattern = re.compile(r'\b[A-Z][a-z]+, [A-Z][a-z]+')
 
-    for link in results:
+    for link in links:
         try:
-            content = link.lower()
-            names.update(pattern_name.findall(content))
-            locations.update(pattern_location.findall(content))
+            res = requests.get(link, timeout=5)
+            soup = BeautifulSoup(res.text, 'html.parser')
+            text = soup.get_text()
+            names.update(name_pattern.findall(text))
+            locations.update(location_pattern.findall(text))
         except:
             continue
     return list(names), list(locations)
 
-
-def get_truecaller_like_data(phone):
-    try:
-        print(Fore.MAGENTA + "[+] Checking public name lookup...")
-        url = f"https://api.apilayer.com/number_verification/validate?number={phone}"
-        headers = {"apikey": "REPLACE_WITH_FREE_API_KEY"}  # You need to register on apilayer or numverify
-        res = requests.get(url, headers=headers)
-        if res.status_code == 200:
-            data = res.json()
-            return data.get("line_type"), data.get("location"), data.get("carrier"), data.get("country_name")
-    except:
-        return None, None, None, None
-
-
 def get_social_profiles(phone):
     profiles = {}
+    username = phone.replace("+", "").replace(" ", "")
     try:
-        print(Fore.MAGENTA + "[+] Searching on social platforms (limited)")
-        username = phone.replace("+", "").replace(" ", "")
-        platforms = {
-            "Twitter": f"https://twitter.com/{username}",
+        print(Fore.MAGENTA + "   [+] Checking limited social profiles...")
+        urls = {
             "Facebook": f"https://facebook.com/{username}",
-            "Instagram": f"https://instagram.com/{username}"
+            "Instagram": f"https://instagram.com/{username}",
+            "Twitter": f"https://twitter.com/{username}"
         }
-        for name, url in platforms.items():
-            try:
-                r = requests.get(url)
-                if r.status_code == 200:
-                    profiles[name] = url
-            except:
-                continue
+        for platform, url in urls.items():
+            r = requests.get(url)
+            if r.status_code == 200 and "Page Not Found" not in r.text:
+                profiles[platform] = url
     except:
         pass
     return profiles
 
-
 def get_ip_location():
     try:
-        print(Fore.MAGENTA + "[+] Getting your current IP-based location...")
         ip = requests.get("https://api.ipify.org").text
         loc = requests.get(f"http://ip-api.com/json/{ip}").json()
         return {
@@ -113,122 +88,63 @@ def get_ip_location():
     except:
         return None
 
-
-def export_to_file(phone, basic, names, locations, results, wa_link, ip_info, profiles):
-    with open("rahul_report.txt", "w", encoding='utf-8') as f:
-        f.write(f"RAHUL BHAI LEVEL 3 TOOL REPORT\nPhone: {phone}\n\n")
-        if basic:
-            f.write(f"Location: {basic['location']}\n")
-            f.write(f"Carrier: {basic['carrier']}\n")
-            f.write(f"Timezone: {', '.join(basic['timezone'])}\n")
-        f.write(f"\nNames Found:\n")
-        for name in names:
-            f.write(f" - {name}\n")
-        f.write(f"\nLocations Mentioned:\n")
-        for loc in locations:
-            f.write(f" - {loc}\n")
-        f.write(f"\nGoogle Mentions:\n")
-        for link in results:
-            f.write(f" - {link}\n")
-        f.write(f"\nWhatsApp Link: {wa_link}\n")
-        if ip_info:
-            f.write(f"\nYour IP Location:\n - IP: {ip_info['ip']}, {ip_info['city']}, {ip_info['region']}, {ip_info['country']}\n")
-        if profiles:
-            f.write(f"\nPossible Social Profiles:\n")
-            for k, v in profiles.items():
-                f.write(f" - {k}: {v}\n")
-
-
 def show_results(phone):
     print_heading()
     print(Fore.BLUE + f"Target Phone Number: {phone}\n")
 
-    # Basic Info
-    print(Fore.CYAN + "[+] Basic Info:")
     basic = get_basic_info(phone)
+    print(Fore.CYAN + "[+] Basic Info:")
     if basic:
         print(Fore.GREEN + f"   Location : {basic['location']}")
         print(Fore.GREEN + f"   Carrier  : {basic['carrier']}")
         print(Fore.GREEN + f"   Timezone : {', '.join(basic['timezone'])}")
     else:
-        print(Fore.RED + "   [!] Failed to fetch basic info.")
+        print(Fore.RED + "   [!] Could not fetch basic info")
 
-    # Google Search
-    results = get_google_mentions(phone)
-    print("\n" + Fore.CYAN + "[+] Google Mentions:")
-    if results:
-        for i, link in enumerate(results):
-            print(Fore.YELLOW + f"   [{i+1}] {link}")
+    links = get_google_mentions(phone)
+    print(Fore.CYAN + "\n[+] Google Mentions:")
+    if links:
+        for i, link in enumerate(links, 1):
+            print(Fore.YELLOW + f"   [{i}] {link}")
     else:
-        print(Fore.RED + "   [!] No public results found.")
+        print(Fore.RED + "   [!] No mentions found")
 
-    # Extracted Names & Locations
-    names, locations = extract_names_and_locations(results)
-    print("\n" + Fore.CYAN + "[+] Name Guessing (from Google):")
+    names, locations = extract_names_and_locations(links)
+    print(Fore.CYAN + "\n[+] Extracted Names:")
     if names:
         for name in names:
             print(Fore.GREEN + f"   - {name}")
     else:
-        print(Fore.RED + "   [!] No names found.")
+        print(Fore.RED + "   [!] No names extracted")
 
-    print("\n" + Fore.CYAN + "[+] Locations Mentioned:")
+    print(Fore.CYAN + "\n[+] Extracted Locations:")
     if locations:
         for loc in locations:
             print(Fore.GREEN + f"   - {loc}")
     else:
-        print(Fore.RED + "   [!] No locations found.")
+        print(Fore.RED + "   [!] No locations extracted")
 
-    # WhatsApp Link
-    print("\n" + Fore.CYAN + "[+] WhatsApp Link:")
-    wa_link = f"https://wa.me/{phone.replace('+', '')}"
-    print(Fore.GREEN + f"   {wa_link}")
+    print(Fore.CYAN + "\n[+] WhatsApp Link:")
+    print(Fore.GREEN + f"   https://wa.me/{phone.replace('+', '')}")
 
-    # Truecaller-style lookup
-    result = get_truecaller_like_data(phone)
-    if result and isinstance(result, tuple) and len(result) == 4:
-        lt, loc, car, ctry = result
-    else:
-        lt, loc, car, ctry = "N/A", "N/A", "N/A", "N/A"
-
-    print("\n" + Fore.CYAN + "[+] Public Lookup:")
-    if lt != "N/A" or loc != "N/A" or car != "N/A":
-        print(Fore.GREEN + f"   Line Type : {lt}")
-        print(Fore.GREEN + f"   Location  : {loc}")
-        print(Fore.GREEN + f"   Carrier   : {car}")
-        print(Fore.GREEN + f"   Country   : {ctry}")
-    else:
-        print(Fore.RED + "   [!] Failed to fetch public name lookup.")
-
-    # IP Geolocation
     ip_info = get_ip_location()
-    print("\n" + Fore.CYAN + "[+] Your IP Location:")
+    print(Fore.CYAN + "\n[+] Your IP Location:")
     if ip_info:
         print(Fore.GREEN + f"   {ip_info['ip']} - {ip_info['city']}, {ip_info['region']}, {ip_info['country']}")
     else:
-        print(Fore.RED + "   [!] IP location fetch failed.")
+        print(Fore.RED + "   [!] Could not fetch IP location")
 
-    # Social Profile Scan
     profiles = get_social_profiles(phone)
-    print("\n" + Fore.CYAN + "[+] Social Media Links:")
+    print(Fore.CYAN + "\n[+] Social Media Links:")
     if profiles:
         for k, v in profiles.items():
             print(Fore.GREEN + f"   {k}: {v}")
     else:
-        print(Fore.RED + "   [!] No public profiles found.")
+        print(Fore.RED + "   [!] No public profiles found")
 
-    # Save to file
-    print(Fore.CYAN + "\n[+] Saving full report to 'rahul_report.txt'...")
-    export_to_file(phone, basic, names, locations, results, wa_link, ip_info, profiles)
-    print(Fore.GREEN + "[✓] All done! Report saved successfully.")
-
+    print(Fore.CYAN + "\n[✓] Scan complete.")
 
 if __name__ == "__main__":
-    try:
-        os.system('cls' if os.name == 'nt' else 'clear')
-        phone = input(Fore.YELLOW + "Enter phone number with country code (e.g. +919876543210): ").strip()
-        if phone and phone.startswith("+") and len(phone) > 8:
-            show_results(phone)
-        else:
-            print(Fore.RED + "[!] Invalid phone number format.")
-    except Exception as e:
-        print(Fore.RED + f"[!] Unexpected error occurred: {e}")
+    os.system('cls' if os.name == 'nt' else 'clear')
+    phone = input(Fore.YELLOW + "Enter phone number with country code (e.g. +919876543210): ")
+    show_results(phone)
